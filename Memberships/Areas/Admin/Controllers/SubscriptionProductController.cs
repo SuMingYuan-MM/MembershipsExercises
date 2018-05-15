@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Web;
 using System.Web.Mvc;
+using Memberships.Areas.Admin.Models;
 using Memberships.Entities;
+using Memberships.Extensions;
 using Memberships.Models;
 
 namespace Memberships.Areas.Admin.Controllers
@@ -19,7 +21,7 @@ namespace Memberships.Areas.Admin.Controllers
         // GET: Admin/SubscriptionProduct
         public async Task<ActionResult> Index()
         {
-            return View(await db.SubscriptionProducts.ToListAsync());
+            return View(await db.SubscriptionProducts.Convert(db));
         }
 
         // GET: Admin/SubscriptionProduct/Details/5
@@ -38,9 +40,14 @@ namespace Memberships.Areas.Admin.Controllers
         }
 
         // GET: Admin/SubscriptionProduct/Create
-        public ActionResult Create()
+        public async Task<ActionResult> Create()
         {
-            return View();
+            var model = new SubscriptionProductModel
+            {
+                Subscriptions = await db.Subscriptions.ToListAsync(),
+                Products = await db.Products.ToListAsync()
+            };
+            return View(model);
         }
 
         // POST: Admin/SubscriptionProduct/Create
@@ -50,14 +57,15 @@ namespace Memberships.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Create([Bind(Include = "ProductId,SubscriptionId")] SubscriptionProduct subscriptionProduct)
         {
-            if (ModelState.IsValid)
+            if (ModelState.IsValid )
             {
                 db.SubscriptionProducts.Add(subscriptionProduct);
                 await db.SaveChangesAsync();
                 return RedirectToAction("Index");
             }
 
-            return View(subscriptionProduct);
+            var model = await subscriptionProduct.Convert(db);
+            return View(model);
         }
 
         // GET: Admin/SubscriptionProduct/Edit/5

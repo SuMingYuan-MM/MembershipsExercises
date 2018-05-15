@@ -15,8 +15,10 @@ namespace Memberships.Areas.Admin.Models
         [DisplayName("Subscription Id")]
         public int SubscriptionId { get; set; }
 
-
+        [DisplayName("Product")]
         public string ProductTitle { get; set; }
+
+        [DisplayName("Subscription")]
         public string SubscriptionTitle { get; set; }
 
         public ICollection<Product> Products { get; set; }

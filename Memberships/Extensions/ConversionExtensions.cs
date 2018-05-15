@@ -152,14 +152,14 @@ namespace Memberships.Extensions
         }
 
         public static async Task<SubscriptionProductModel> Convert(this SubscriptionProduct subscriptionProduct,
-            ApplicationDbContext dbContext)
+            ApplicationDbContext dbContext, bool addListData = true)
         {
             var model = new SubscriptionProductModel
             {
                 SubscriptionId = subscriptionProduct.SubscriptionId,
                 ProductId = subscriptionProduct.ProductId,
-                Subscriptions = await dbContext.Subscriptions.ToListAsync(),
-                Products = await dbContext.Products.ToListAsync(),
+                Subscriptions = addListData ? await dbContext.Subscriptions.ToListAsync():null,
+                Products = addListData ? await dbContext.Products.ToListAsync():null,
                 SubscriptionTitle = (await dbContext.Subscriptions.FirstOrDefaultAsync(s => s.Id.Equals(subscriptionProduct.SubscriptionId)))?.Title,
                 ProductTitle = (await dbContext.Products.FirstOrDefaultAsync(p => p.Id.Equals(subscriptionProduct.ProductId)))?.Title
             };
