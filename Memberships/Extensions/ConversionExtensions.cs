@@ -126,10 +126,97 @@ namespace Memberships.Extensions
                     }
                     catch (Exception e)
                     {
+                        Console.WriteLine(e);
                         transaction.Dispose();
                     }
                 }
             }
         }
+
+        public static async Task<List<SubscriptionProductModel>> Convert(this IQueryable<SubscriptionProduct> subscriptionProducts,
+            ApplicationDbContext dbContext)
+        {
+            if (subscriptionProducts.Count().Equals(0)) 
+                return new List<SubscriptionProductModel>();
+
+            var model = await (from sp in subscriptionProducts
+                select new SubscriptionProductModel
+                {
+                    SubscriptionId = sp.SubscriptionId,
+                    ProductId = sp.ProductId,
+                    SubscriptionTitle = dbContext.Subscriptions.FirstOrDefault(s => s.Id.Equals(sp.SubscriptionId)).Title,
+                    ProductTitle = dbContext.Products.FirstOrDefault(p => p.Id.Equals(sp.ProductId)).Title
+                }).ToListAsync();
+
+            return model;
+        }
+
+        public static async Task<SubscriptionProductModel> Convert(this SubscriptionProduct subscriptionProduct,
+            ApplicationDbContext dbContext)
+        {
+            var model = new SubscriptionProductModel
+            {
+                SubscriptionId = subscriptionProduct.SubscriptionId,
+                ProductId = subscriptionProduct.ProductId,
+                Subscriptions = await dbContext.Subscriptions.ToListAsync(),
+                Products = await dbContext.Products.ToListAsync(),
+                SubscriptionTitle = (await dbContext.Subscriptions.FirstOrDefaultAsync(s => s.Id.Equals(subscriptionProduct.SubscriptionId)))?.Title,
+                ProductTitle = (await dbContext.Products.FirstOrDefaultAsync(p => p.Id.Equals(subscriptionProduct.ProductId)))?.Title
+            };
+            return model;
+        }
+
+        public static async Task<bool> CanChange(this SubscriptionProduct subscriptionProduct,
+            ApplicationDbContext dbContext)
+        {
+            var oldSubscriptionProduct = await dbContext.SubscriptionProducts.CountAsync(
+                sp => sp.ProductId.Equals(subscriptionProduct.OldProductId) &&
+                      sp.ProductId.Equals(subscriptionProduct.OldSubscriptionId));
+
+            var newSubscriptionProduct = await dbContext.SubscriptionProducts.CountAsync(
+                sp => sp.ProductId.Equals(subscriptionProduct.ProductId) &&
+                      sp.SubscriptionId.Equals(subscriptionProduct.SubscriptionId));
+
+            return oldSubscriptionProduct.Equals(1) && newSubscriptionProduct.Equals(0);
+        }
+
+        public static async Task Change(this SubscriptionProduct subscriptionProduct, ApplicationDbContext dbContext)
+        {
+            var oldSubscriptionProduct =
+                await dbContext.SubscriptionProducts.FirstOrDefaultAsync(
+                    sp => sp.ProductId.Equals(subscriptionProduct.OldProductId) &&
+                          sp.SubscriptionId.Equals(subscriptionProduct.OldSubscriptionId));
+            var newSubscriptionProduct =
+                await dbContext.SubscriptionProducts.FirstOrDefaultAsync(
+                    sp => sp.ProductId.Equals(subscriptionProduct.ProductId) &&
+                          sp.SubscriptionId.Equals(subscriptionProduct.SubscriptionId));
+
+            if (oldSubscriptionProduct != null && newSubscriptionProduct == null)
+            {
+                newSubscriptionProduct = new SubscriptionProduct
+                {
+                    ProductId = subscriptionProduct.ProductId,
+                    SubscriptionId = subscriptionProduct.SubscriptionId
+                };
+
+                using (var transaction = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    try
+                    {
+                        dbContext.SubscriptionProducts.Remove(oldSubscriptionProduct);
+                        dbContext.SubscriptionProducts.Add(newSubscriptionProduct);
+                        await dbContext.SaveChangesAsync();
+                        transaction.Complete();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        transaction.Dispose();
+                    }
+                }
+            }
+        }
+
+
     }
 }
