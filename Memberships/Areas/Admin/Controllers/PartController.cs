@@ -111,6 +111,9 @@ namespace Memberships.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> DeleteConfirmed(int id)
         {
+            var isUnused = await db.Items.CountAsync(i => i.PartId.Equals(id)) == 0;
+            if (!isUnused) return RedirectToAction("Index");
+
             Part part = await db.Parts.FindAsync(id);
             db.Parts.Remove(part);
             await db.SaveChangesAsync();

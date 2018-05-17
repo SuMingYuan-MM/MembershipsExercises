@@ -5,6 +5,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
+using System.Transactions;
 using System.Web;
 using System.Web.Mvc;
 using Memberships.Entities;
@@ -112,8 +113,27 @@ namespace Memberships.Areas.Admin.Controllers
         public async Task<ActionResult> DeleteConfirmed(int id)
         {
             Subscription subscription = await db.Subscriptions.FindAsync(id);
-            db.Subscriptions.Remove(subscription);
-            await db.SaveChangesAsync();
+
+            using (var transaction = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+            {
+                try
+                {
+                    var subscriptionProducts = db.SubscriptionProducts.Where(sp => sp.ProductId.Equals(id));
+                    db.SubscriptionProducts.RemoveRange(subscriptionProducts);
+
+                    db.Subscriptions.Remove(subscription);
+                    await db.SaveChangesAsync();
+
+                    transaction.Complete();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    transaction.Dispose();
+                }
+            }
+
+            
             return RedirectToAction("Index");
         }
 

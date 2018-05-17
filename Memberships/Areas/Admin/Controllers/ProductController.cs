@@ -5,6 +5,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
+using System.Transactions;
 using System.Web;
 using System.Web.Mvc;
 using Memberships.Areas.Admin.Models;
@@ -73,7 +74,7 @@ namespace Memberships.Areas.Admin.Controllers
                 return RedirectToAction("Index");
             }
 
-            return View(product);
+            return View(await product.Convert(db));
         }
 
         // GET: Admin/Product/Edit/5
@@ -109,7 +110,7 @@ namespace Memberships.Areas.Admin.Controllers
                 await db.SaveChangesAsync();
                 return RedirectToAction("Index");
             }
-            return View(product);
+            return View(await product.Convert(db));
         }
 
         // GET: Admin/Product/Delete/5
@@ -136,8 +137,29 @@ namespace Memberships.Areas.Admin.Controllers
         public async Task<ActionResult> DeleteConfirmed(int id)
         {
             Product product = await db.Products.FindAsync(id);
-            db.Products.Remove(product);
-            await db.SaveChangesAsync();
+
+            using (var transaction = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+            {
+                try
+                {
+                    var prodItems = db.ProductItems.Where(pi => pi.ProductId.Equals(id));
+                    var subscriptionProduct = db.SubscriptionProducts.Where(sp => sp.ProductId.Equals(id));
+
+                    db.SubscriptionProducts.RemoveRange(subscriptionProduct);
+                    db.ProductItems.RemoveRange(prodItems);
+                    db.Products.Remove(product);
+                    await db.SaveChangesAsync();
+
+                    transaction.Complete();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    transaction.Dispose();
+                }
+            }
+
+            
             return RedirectToAction("Index");
         }
 

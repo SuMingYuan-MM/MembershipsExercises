@@ -5,6 +5,7 @@ using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
+using System.Transactions;
 using System.Web;
 using System.Web.Mvc;
 using Memberships.Entities;
@@ -111,9 +112,14 @@ namespace Memberships.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> DeleteConfirmed(int id)
         {
+            var isUnused = await db.Items.CountAsync(i => i.SectionId.Equals(id)) == 0;
+            if (!isUnused) return RedirectToAction("Index");
+
             Section section = await db.Sections.FindAsync(id);
+
             db.Sections.Remove(section);
             await db.SaveChangesAsync();
+
             return RedirectToAction("Index");
         }
 
