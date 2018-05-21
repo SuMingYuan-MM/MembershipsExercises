@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using Memberships.Extensions;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
@@ -151,7 +154,15 @@ namespace Memberships.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
+                var user = new ApplicationUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    FirstName = model.FirstName,
+                    IsActive = true,
+                    Registered = DateTime.Now,
+                    EmailConfirmed = true
+                };
                 var result = await UserManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
@@ -401,6 +412,136 @@ namespace Memberships.Controllers
         public ActionResult ExternalLoginFailure()
         {
             return View();
+        }
+
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> Index()
+        {
+            var users = new List<UserViewModel>();
+            await users.GetUsers();
+
+            return View(users);
+        }
+
+        [Authorize(Roles = "Admin")]
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> Create(UserViewModel model)
+        {
+            try
+            {
+                if (model == null)
+                {
+                    return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                }
+
+                if (ModelState.IsValid)
+                {
+
+                    var user = new ApplicationUser
+                    {
+                        UserName = model.Email,
+                        Email = model.Email,
+                        FirstName = model.FirstName,
+                        IsActive = true,
+                        EmailConfirmed = true,
+                        Registered = DateTime.Now
+                    };
+
+                    var result = await UserManager.CreateAsync(user, model.Password);
+                    if(result.Succeeded)
+                        return RedirectToAction("Index", "Account");
+                    AddErrors(result);
+                }
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            return View(model);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> Edit(string userId)
+        {
+            if(userId == null || userId.Equals(String.Empty))
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+
+            var user = await UserManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return HttpNotFound();
+
+            var model = new UserViewModel
+            {
+                Id = userId,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                Password = user.PasswordHash
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> Edit(UserViewModel model)
+        {
+            try
+            {
+                if(model == null)
+                    return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+
+                if (ModelState.IsValid)
+                {
+                    var user = await UserManager.FindByIdAsync(model.Id);
+
+                    user.Email = model.Email;
+                    user.FirstName = model.FirstName;
+                    user.UserName = model.Email;
+
+                    if (!user.PasswordHash.Equals(model.Password))
+                        user.PasswordHash = UserManager.PasswordHasher.HashPassword(model.Password);
+
+                    var result = await UserManager.UpdateAsync(user);
+
+                    if (result.Succeeded)
+                        return RedirectToAction("Index", "Account");
+
+                    AddErrors(result);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            return View(model);
+        }
+
+
+        public async Task<ActionResult> Delete(string userId)
+        {
+            if(userId == null || userId.Equals(string.Empty))
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+
+            var user = await UserManager.FindByIdAsync(userId);
+            var model = new UserViewModel
+            {
+                Id = userId,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                Password = user.PasswordHash
+            };
+            return View(model);
         }
 
         protected override void Dispose(bool disposing)
