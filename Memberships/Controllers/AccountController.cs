@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -414,6 +415,7 @@ namespace Memberships.Controllers
             return View();
         }
 
+        #region User
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult> Index()
         {
@@ -455,7 +457,7 @@ namespace Memberships.Controllers
                     };
 
                     var result = await UserManager.CreateAsync(user, model.Password);
-                    if(result.Succeeded)
+                    if (result.Succeeded)
                         return RedirectToAction("Index", "Account");
                     AddErrors(result);
                 }
@@ -472,7 +474,7 @@ namespace Memberships.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult> Edit(string userId)
         {
-            if(userId == null || userId.Equals(String.Empty))
+            if (userId == null || userId.Equals(String.Empty))
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
 
             var user = await UserManager.FindByIdAsync(userId);
@@ -498,7 +500,7 @@ namespace Memberships.Controllers
         {
             try
             {
-                if(model == null)
+                if (model == null)
                     return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
 
                 if (ModelState.IsValid)
@@ -530,7 +532,7 @@ namespace Memberships.Controllers
 
         public async Task<ActionResult> Delete(string userId)
         {
-            if(userId == null || userId.Equals(string.Empty))
+            if (userId == null || userId.Equals(string.Empty))
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
 
             var user = await UserManager.FindByIdAsync(userId);
@@ -543,6 +545,90 @@ namespace Memberships.Controllers
             };
             return View(model);
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> Delete(UserViewModel model)
+        {
+            try
+            {
+                if (model == null)
+                    return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+
+                var user = await UserManager.FindByIdAsync(model.Id);
+                var result = await UserManager.DeleteAsync(user);
+
+                if (result.Succeeded)
+                {
+                    var db = new ApplicationDbContext();
+                    var subscriptions = db.UserSubscriptions.Where(u => u.UserId.Equals(user.Id));
+                    db.UserSubscriptions.RemoveRange(subscriptions);
+
+                    await db.SaveChangesAsync();
+                    return RedirectToAction("Index", "Account");
+                }
+
+                AddErrors(result);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            return View(model);
+        }
+        #endregion
+
+        #region Subscription
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> Subscriptions(string userId)
+        {
+            if (userId == null)
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+
+            var db = new ApplicationDbContext();
+            var model = new UserSubscriptionViewModel();
+            model.UserSubscriptions = await (from us in db.UserSubscriptions
+                                             join s in db.Subscriptions
+                                             on us.SubscriptionId equals s.Id
+                                             where us.UserId.Equals(userId)
+                                             select new UserSubscriptionModel
+                                             {
+                                                 Id = us.SubscriptionId,
+                                                 StartDate = us.StartDate,
+                                                 EndDate = us.EndDate,
+                                                 Description = s.Description,
+                                                 RegistrationCode = s.RegistrationCode,
+                                                 Title = s.Title
+                                             }).ToListAsync();
+
+            var ids = model.UserSubscriptions.Select(us => us.Id);
+
+            model.Subscriptions = await db.Subscriptions.Where(s => !ids.Contains(s.Id)).ToListAsync();
+            model.DisableDropDown = model.Subscriptions.Count.Equals(0);
+            model.UserId = userId;
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> Subscription(UserSubscriptionViewModel model)
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult> RemoveUserSubscription(UserSubscriptionViewModel model)
+        {
+            return View();
+        }
+        #endregion
 
         protected override void Dispose(bool disposing)
         {
