@@ -61,8 +61,7 @@
             <td>@Html.DisplayFor(modelItem=>item.StartDate)</td>
             <td>@Html.DisplayFor(modelItem=>item.EndDate)</td>
             <td>
-                <a type="button" class="btn btn-danger btn-sm" href="@Url.Action("RemoveUserSubscription")
-                   ?subscriptionId=@item.Id&userId=@Model.UserId">
+                <a type="button" class="btn btn-danger btn-sm" href="@Url.Action("RemoveUserSubscription")?subscriptionId=@item.Id&userId=@Model.UserId">
                     <span class="glyphicon glyphicon-trash" area-hidden="true"></span>
                 </a>
             </td>

@@ -8,6 +8,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using System.Web.WebPages;
+using Memberships.Entities;
 using Memberships.Extensions;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
@@ -616,17 +618,57 @@ namespace Memberships.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult> Subscription(UserSubscriptionViewModel model)
+        public async Task<ActionResult> Subscriptions(UserSubscriptionViewModel model)
         {
-            return View();
-        }
+            try
+            {
+                if (model == null)
+                    return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+                if (ModelState.IsValid)
+                {
+                    var db = new ApplicationDbContext();
+                    db.UserSubscriptions.Add(new UserSubscription
+                    {
+                        UserId = model.UserId,
+                        SubscriptionId = model.SubscriptionId,
+                        StartDate = DateTime.Now,
+                        EndDate = DateTime.MaxValue
+                    });
+
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            return RedirectToAction("Subscriptions", "Account", new {userId = model.UserId});
+        }
+        
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult> RemoveUserSubscription(UserSubscriptionViewModel model)
+        public async Task<ActionResult> RemoveUserSubscription(string userId, int subscriptionId)
         {
-            return View();
+            try
+            {
+                if (userId == null || userId.IsEmpty() || subscriptionId <= 0)
+                    return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+
+                if (ModelState.IsValid)
+                {
+                    var db = new ApplicationDbContext();
+                    var subscriptions = db.UserSubscriptions
+                        .Where(u => u.UserId.Equals(userId) && u.SubscriptionId.Equals(subscriptionId));
+                    db.UserSubscriptions.RemoveRange(subscriptions);
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            return RedirectToAction("Subscriptions", "Account", new {userId = userId});
         }
         #endregion
 
