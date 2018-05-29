@@ -1,4 +1,7 @@
 ﻿@using Memberships.Models
+
+@model IEnumerable<ThumbnailAreaModel>
+
 @{
     ViewBag.Title = "Home Page";
 }
@@ -8,7 +11,10 @@
     {
         // Display user is logged in
         <div class="col-xs-12">
-            @Html.Partial("_ThumbnailAreaPartial", new ThumbnailAreaModel())
+            @foreach (var area in Model)
+            {
+                @Html.Partial("_ThumbnailAreaPartial", area)
+            }
         </div>
     }
     else

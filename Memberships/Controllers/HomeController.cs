@@ -19,7 +19,7 @@ namespace Memberships.Controllers
 
             var count = thumbnails.Count() / 4;
             var model = new List<ThumbnailAreaModel>();
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i <= count; i++)
             {
                 model.Add(new ThumbnailAreaModel
                 {
