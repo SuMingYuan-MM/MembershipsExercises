@@ -1,28 +1,38 @@
 ﻿@model Memberships.Models.ThumbnailAreaModel
     
-<div>
-    <h3 class="headline">@Model.Title</h3>
-</div>
 
 <div class="row">
+    @if (!Model.Title.Equals(string.Empty)) { 
+        <div>
+            <h3 class="headline">@Model.Title</h3>
+        </div>
+    }
+
     @if (Model.Thumbnails.Any())
     {
-        <div class="col-sm-3">
-            <div class="thumbnail">
-                @foreach (var thumbnail in Model.Thumbnails)
-                {
-                    <img src="@thumbnail.ImageUrl" alt=""/>
+        foreach (var thumbnail in Model.Thumbnails)
+         {
+            <div class="col-sm-3">
+                <div class="thumbnail">
+                    <div class="thumbnail-container">
+                        <div class="thumbnail-img-container">
+                            <img class="thumbnail-img" src="@thumbnail.ImageUrl" alt=""/>
+                        </div>
+                        <a class="tag-text-tag" href="@thumbnail.Link">@thumbnail.TagText</a>
+                        <div class="tag content-tag">@thumbnail.ContentTag</div>
+                    </div>
+                    
                     <div class="caption">
                         <h3><a href="@thumbnail.Link">@thumbnail.Title</a>
                         </h3>
                         <p>@thumbnail.Description</p>
                     </div>
-                }
+                </div>
             </div>
-        </div>
+         }
     }
+
 </div>
-    
 
 
 
