@@ -1,0 +1,39 @@
+﻿@model Memberships.Models.ProductItemRow
+    
+<div class="product-item row">
+    <div class="col-sm-2">
+        <img width="140" src="@Model.ImageUrl" alt=""/>
+    </div>
+    <div class="col-sm-10 text-color line-buttom min-height">
+        @if (!Model.IsAvailable)
+        {
+            if (Model.IsDownload)
+            {
+                <a class="" href="@Model.Link" target="_blank">@Model.Title</a>
+            }
+            <p>
+                Will be released: @Model.ReleaseDate.Value.ToShortDateString()
+            </p>
+        }
+        <h2>
+            @if (Model.IsAvailable)
+            {
+                if (Model.IsDownload)
+                {
+                    <a class="" href="@Model.Link" target="_blank">@Model.Title</a>
+                }
+                else
+                {
+                    <a class="" href="@Model.Link">@Model.Title</a>
+                }
+            }
+            else
+            {
+                @Model.Title
+            }
+        </h2>
+        <p>@Model.Description</p>
+    </div>
+</div>
+<br/>
+

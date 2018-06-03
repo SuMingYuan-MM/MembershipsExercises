@@ -45,7 +45,7 @@ namespace Memberships.Entities
 
         [DisplayName("Wait Days")]
         [DefaultValue(0)]
-        public string WaitDays { get; set; }
+        public int WaitDays { get; set; }
 
         [DisplayName("Is Free")]
         public bool IsFree { get; set; }
